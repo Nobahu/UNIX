@@ -31,17 +31,7 @@ trap 'cleanDir $?' EXIT
 
 case "$SOURCE_FILE" in
     *.cpp)
-        # Пробуем разные компиляторы C++
-        if command -v g++ >/dev/null 2>&1; then
-            COMPILER="g++"
-        elif command -v clang++ >/dev/null 2>&1; then
-            COMPILER="clang++"
-        elif command -v c++ >/dev/null 2>&1; then
-            COMPILER="c++"
-        else
-            echo "Error: no C++ compiler found (tried g++, clang++, c++)" >&2
-            cleanDir 12
-        fi
+        COMPILER="c++"
         ;;
     *.tex)
         ;;
