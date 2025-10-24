@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -eu
 
@@ -31,7 +31,7 @@ trap 'cleanDir $?' EXIT
 
 case "$SOURCE_FILE" in
     *.cpp)
-        COMPILER="c++"
+        COMPILER="g++"
         ;;
     *.tex)
         ;;
@@ -44,7 +44,7 @@ esac
 OUTPUT=$(grep '&Output:' "$SOURCE_FILE" | sed 's/.*&Output:\s*//')
 
 if [ -z "$OUTPUT" ]; then
-    echo "No filename with &Output" >&2
+    echo "There is no &Output in file" >&2
     cleanDir 5
 fi
 
