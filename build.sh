@@ -9,16 +9,8 @@ fi
 
 SOURCE_FILE="$1"
 
-if [ ! -f "$SOURCE_FILE" ]; then
-    echo "Error: file doesn't exist" >&2
-    exit 2
-fi
-
 SOURCE_DIR=$(pwd)
-TEMP_DIR=$(mktemp -d) || {
-    echo "Error: Tempdir creation failed" >&2
-    exit 3
-}
+TEMP_DIR=$(mktemp -d)
 
 cleanDir() {
     rm -rf "$TEMP_DIR"
@@ -29,39 +21,15 @@ trap 'cleanDir 130' INT
 trap 'cleanDir 143' TERM
 trap 'cleanDir $?' EXIT
 
-case "$SOURCE_FILE" in
-    *.cpp)
-        COMPILER="g++"
-        ;;
-    *.tex)
-        ;;
-    *)
-        echo "Error: wrong file type" >&2
-        cleanDir 4
-        ;;
-esac
-
 OUTPUT=$(grep '&Output:' "$SOURCE_FILE" | sed 's/.*&Output:\s*//')
-
-if [ -z "$OUTPUT" ]; then
-    echo "There is no &Output in file" >&2
-    cleanDir 5
-fi
-
-cp "$SOURCE_FILE" "$TEMP_DIR/" || {
-    echo "Error: copy fail" >&2
-    cleanDir 6
-}
-
-cd "$TEMP_DIR" || {
-    echo "Error: directory change failed" >&2
-    cleanDir 7
-}
-
 SOURCE_NAME=$(basename "$SOURCE_FILE")
 
+cp "$SOURCE_FILE" "$TEMP_DIR/"
+cd "$TEMP_DIR"
+
 case "$SOURCE_FILE" in
     *.cpp)
+	COMPILER="g++"
         echo "Compiling with $COMPILER..." >&2
         $COMPILER "$SOURCE_NAME" -o "$OUTPUT" || cleanDir 8
         ;;
@@ -72,11 +40,6 @@ case "$SOURCE_FILE" in
         ;;
 esac
 
-if [ -f "$OUTPUT" ]; then
-    echo "Output file created: $OUTPUT" >&2
-    cp "$OUTPUT" "$SOURCE_DIR/" || cleanDir 11
-else
-    cleanDir 9
-fi
+cp "$OUTPUT" "$SOURCE_DIR/"
 
 cleanDir 0
