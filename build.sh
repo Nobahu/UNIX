@@ -30,11 +30,11 @@ cd "$TEMP_DIR"
 case "$SOURCE_FILE" in
     *.cpp)
 	COMPILER="g++"
-        echo "Compiling with $COMPILER..." >&2
+        echo "Compiling with $COMPILER..."
         $COMPILER "$SOURCE_NAME" -o "$OUTPUT" || cleanDir 8
         ;;
     *.tex)
-        echo "Compiling LaTeX..." >&2
+        echo "Compiling LaTeX..."
         pdflatex "$SOURCE_NAME" >/dev/null 2>&1 || cleanDir 9
         mv "${SOURCE_NAME%.tex}.pdf" "$OUTPUT" || cleanDir 10
         ;;
