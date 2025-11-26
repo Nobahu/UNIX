@@ -12,11 +12,11 @@ CONTAINER_ID="container-$(hostname)"
 COUNTER=1
 echo "container $CONTAINER_ID (PID: $$)"
 
-exec 200>"$LOCKFILE"
+exec 9>"$LOCKFILE"
 
 while true; do
   FILENAME=""
-  flock -x 200
+  flock -x 9
   for i in {001..999}; do
     if [ ! -f "$DIR/file$i" ]; then
       FILENAME="file$i"
@@ -29,7 +29,7 @@ while true; do
       break
     fi
   done
-  flock -u 200
+  flock -u 9
   if [ -n "$FILENAME" ] && [ -f "$DIR/$FILENAME" ]; then
     sleep 1
     rm -f "$DIR/$FILENAME"
@@ -39,6 +39,7 @@ while true; do
   fi
   sleep 1
 done
+
 
 
 
