@@ -32,12 +32,13 @@ while true; do
   flock -u 200
   if [ -n "$FILENAME" ] && [ -f "$DIR/$FILENAME" ]; then
     sleep 1
-    rm "$DIR/$FILENAME"
+    rm -f "$DIR/$FILENAME"
     echo "$(date): $FILENAME deleted"
     COUNTER=$((COUNTER+1))
     sleep 1
   fi
   sleep 1
 done
+
 
 
