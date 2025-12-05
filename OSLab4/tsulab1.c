@@ -45,18 +45,23 @@ static ssize_t proc_file_read(struct file *filePtr, char __user *buffer,
 {
 	char message[100];
 	int days_left;
+	int len;
 
 	if(*offset > 0) {
 		return 0;
 	}
 	days_left = calculate();
 
-	snprintf(message, sizeof(message), "Days until China new year: %d days\n ", days_left);
+	len = snprintf(message, sizeof(message), "Days until China new year: %d days\n", days_left);
 
-	if(copy_to_user(buffer, message, strlen(message))) {
+	if (len > bufferLength) {
+		len = bufferLength;
+	}
+
+	if(copy_to_user(buffer, message, len)) {
 		return -EFAULT;
 	}
-	*offset = strlen(message);
+	*offset = len;
 	return *offset;
 }
 
