@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash Microservice</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 800px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5em;
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        
+        textarea, select, button {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        textarea {
+            height: 120px;
+            resize: vertical;
+            font-family: monospace;
+        }
+        
+        textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .algorithm-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .algo-btn {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            background: #f8f9fa;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .algo-btn:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+        }
+        
+        .algo-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            font-size: 18px;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        
+        .hash-result {
+            font-family: monospace;
+            font-size: 18px;
+            word-break: break-all;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Hash Microservice</h1>
+        
+        <div class="input-group">
+            <label for="textInput">Текст для хеширования:</label>
+            <textarea id="textInput" placeholder="Введите текст...">Hello, World!</textarea>
+        </div>
+        
+        <label>Выберите алгоритм:</label>
+        <div class="algorithm-selector">
+            <div class="algo-btn active" data-algo="md5">MD5</div>
+            <div class="algo-btn" data-algo="sha3_256">SHA3-256</div>
+            <div class="algo-btn" data-algo="murmur2">Murmur2</div>
+        </div>
+        
+        <button id="hashBtn">Вычислить хеш</button>
+        
+        <div class="result" id="result">
+            <h3>Результат:</h3>
+            <div class="hash-result" id="hashOutput"></div>
+            <div class="meta-info">
+                <div class="meta-item">
+                    <span>Алгоритм:</span>
+                    <span class="badge" id="algoName">MD5</span>
+                </div>
+                <div class="meta-item">
+                    <span>Реализация алгоритмa:</span>
+                    <span class="badge" id="engine">C++</span>
+                </div>
+                <div class="meta-item">
+                    <span>Воркер:</span>
+                    <span class="badge" id="worker">hash_worker_1</span>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Микросервис с горизонтальной масштабируемостью | Алгоритмы: C++ | Балансировка: Nginx</p>
+            <p>Created by: Nobahu (Lyamburtsev Alexandr)</p>
+        </footer>
+    </div>
+
+    <script>
+        let currentAlgorithm = 'md5';
+        
+        // Выбор алгоритма
+        document.querySelectorAll('.algo-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.algo-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentAlgorithm = btn.dataset.algo;
+            });
+        });
+        
+        // Вычисление хеша
+        document.getElementById('hashBtn').addEventListener('click', async () => {
+            const text = document.getElementById('textInput').value;
+            const resultDiv = document.getElementById('result');
+            const hashOutput = document.getElementById('hashOutput');
+            const algoName = document.getElementById('algoName');
+            const engine = document.getElementById('engine');
+            const worker = document.getElementById('worker');
+            
+            try {
+                const response = await fetch('/hash', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        algorithm: currentAlgorithm
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    hashOutput.textContent = `Ошибка: ${data.error}`;
+                    hashOutput.style.borderLeftColor = '#dc3545';
+                } else {
+                    hashOutput.textContent = data.hash;
+                    hashOutput.style.borderLeftColor = '#28a745';
+                    algoName.textContent = data.algorithm.toUpperCase();
+                    engine.textContent = data.engine;
+                    worker.textContent = data.worker;
+                }
+                
+                resultDiv.classList.add('show');
+            } catch (error) {
+                hashOutput.textContent = `Ошибка соединения: ${error.message}`;
+                hashOutput.style.borderLeftColor = '#dc3545';
+                resultDiv.classList.add('show');
+            }
+        });
+        
+    </script>
+</body>
+</html>
