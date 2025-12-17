@@ -117,6 +117,13 @@
             transform: translateY(0);
         }
         
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
         .result {
             background: #f8f9fa;
             border-radius: 10px;
@@ -222,6 +229,7 @@
 
     <script>
         let currentAlgorithm = 'md5';
+        let isProcessing = false; // Флаг блокировки
         
         // Выбор алгоритма
         document.querySelectorAll('.algo-btn').forEach(btn => {
@@ -232,16 +240,35 @@
             });
         });
         
-        // Вычисление хеша
+        // Основная функция
         document.getElementById('hashBtn').addEventListener('click', async () => {
+            // Блокируем повторные нажатия
+            if (isProcessing) {
+                console.log("Кнопка заблокирована, обработка уже идет");
+                return;
+            }
+            
             const text = document.getElementById('textInput').value;
             const resultDiv = document.getElementById('result');
             const hashOutput = document.getElementById('hashOutput');
             const algoName = document.getElementById('algoName');
             const engine = document.getElementById('engine');
             const worker = document.getElementById('worker');
+            const hashBtn = document.getElementById('hashBtn');
+            
+            // Устанавливаем флаг блокировки
+            isProcessing = true;
+            hashBtn.disabled = true;
+            hashBtn.textContent = "Обработка...";
+            hashBtn.style.opacity = "0.7";
+            
+            // Показываем статус
+            hashOutput.textContent = "Отправка запроса...";
+            hashOutput.style.borderLeftColor = '#ffc107';
+            resultDiv.classList.add('show');
             
             try {
+                // 1. Отправляем запрос
                 const response = await fetch('/hash', {
                     method: 'POST',
                     headers: {
@@ -255,25 +282,104 @@
                 
                 const data = await response.json();
                 
+                // Если ошибка от сервера
                 if (data.error) {
                     hashOutput.textContent = `Ошибка: ${data.error}`;
                     hashOutput.style.borderLeftColor = '#dc3545';
-                } else {
-                    hashOutput.textContent = data.hash;
-                    hashOutput.style.borderLeftColor = '#28a745';
-                    algoName.textContent = data.algorithm.toUpperCase();
-                    engine.textContent = data.engine;
-                    worker.textContent = data.worker;
+                    resetButton(); // Разблокируем кнопку
+                    return;
                 }
                 
-                resultDiv.classList.add('show');
+                // Если Kafka недоступна
+                if (data.status === 'error') {
+                    hashOutput.textContent = `Ошибка: ${data.message || 'Сервис временно недоступен'}`;
+                    hashOutput.style.borderLeftColor = '#dc3545';
+                    resetButton(); // Разблокируем кнопку
+                    return;
+                }
+                
+                // Успешно отправлено
+                if (data.request_id) {
+                    hashOutput.textContent = `Запрос в очереди (ID: ${data.request_id.slice(0, 8)}...)`;
+                    hashOutput.style.borderLeftColor = '#ffc107';
+                    
+                    // 2. Начинаем опрашивать результат
+                    await pollResult(data.request_id);
+                } else {
+                    // Старая логика
+                    hashOutput.textContent = data.hash || "Неожиданный ответ";
+                    hashOutput.style.borderLeftColor = data.hash ? '#28a745' : '#dc3545';
+                    algoName.textContent = data.algorithm ? data.algorithm.toUpperCase() : 'MD5';
+                    engine.textContent = data.engine || 'C++';
+                    worker.textContent = data.worker || 'unknown';
+                    resetButton(); // Разблокируем кнопку
+                }
+                
             } catch (error) {
                 hashOutput.textContent = `Ошибка соединения: ${error.message}`;
                 hashOutput.style.borderLeftColor = '#dc3545';
-                resultDiv.classList.add('show');
+                resetButton(); // Разблокируем кнопку
             }
         });
         
+        // Функция опроса результата
+        async function pollResult(requestId, attempt = 0) {
+            const maxAttempts = 30;
+            const hashOutput = document.getElementById('hashOutput');
+            const algoName = document.getElementById('algoName');
+            const engine = document.getElementById('engine');
+            const worker = document.getElementById('worker');
+            
+            if (attempt >= maxAttempts) {
+                hashOutput.textContent = "Таймаут: результат не получен";
+                hashOutput.style.borderLeftColor = '#dc3545';
+                resetButton(); // Разблокируем кнопку
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/hash/${requestId}`);
+                const data = await response.json();
+                
+                if (data.status === 'completed') {
+                    // Результат готов
+                    const result = data.result;
+                    hashOutput.textContent = result.hash;
+                    hashOutput.style.borderLeftColor = '#28a745';
+                    algoName.textContent = result.algorithm.toUpperCase();
+                    engine.textContent = result.engine;
+                    worker.textContent = result.worker;
+                    resetButton(); // Разблокируем кнопку
+                    
+                } else if (data.status === 'processing') {
+                    // Еще обрабатывается
+                    hashOutput.textContent = `Обработка...`;
+                    hashOutput.style.borderLeftColor = '#ffc107';
+                    
+                    // Продолжаем опрашивать
+                    setTimeout(() => pollResult(requestId, attempt + 1), 1000);
+                    
+                } else {
+                    hashOutput.textContent = `Неизвестный статус: ${data.status}`;
+                    hashOutput.style.borderLeftColor = '#dc3545';
+                    resetButton(); // Разблокируем кнопку
+                }
+                
+            } catch (error) {
+                hashOutput.textContent = `Ошибка опроса: ${error.message}`;
+                hashOutput.style.borderLeftColor = '#dc3545';
+                resetButton(); // Разблокируем кнопку
+            }
+        }
+        
+        // Функция сброса состояния кнопки
+        function resetButton() {
+            const hashBtn = document.getElementById('hashBtn');
+            isProcessing = false;
+            hashBtn.disabled = false;
+            hashBtn.textContent = "Вычислить хеш";
+            hashBtn.style.opacity = "1";
+        }
     </script>
 </body>
 </html>
