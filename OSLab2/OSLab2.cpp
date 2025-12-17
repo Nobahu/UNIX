@@ -14,7 +14,6 @@ private:
     static volatile sig_atomic_t shouldExit;
     int server_fd;
     int client_fd;
-    sigset_t origMask;
 
     static void sigHupHandler(int r) {
         wasSigHup = 1;
@@ -28,12 +27,10 @@ private:
         struct sigaction sa;
         memset(&sa, 0, sizeof(sa));
         
-        //SIGHUP
         sa.sa_handler = sigHupHandler;
         sa.sa_flags = SA_RESTART;
         sigaction(SIGHUP, &sa, NULL);
         
-        //SIGINT
         sa.sa_handler = sigIntHandler;
         sa.sa_flags = 0;
         sigaction(SIGINT, &sa, NULL);
@@ -41,6 +38,9 @@ private:
 
     void setupSocket() {
         server_fd = socket(AF_INET, SOCK_STREAM, 0);
+        
+        int opt = 1;
+        setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
         
         struct sockaddr_in sock_addr;
         memset(&sock_addr, 0, sizeof(sock_addr));
@@ -57,8 +57,10 @@ public:
         setupSignalHandler();
         setupSocket();
         
-        sigemptyset(&origMask);
-        sigaddset(&origMask, SIGHUP);
+        sigset_t blockedMask;
+        sigemptyset(&blockedMask);
+        sigaddset(&blockedMask, SIGHUP);
+        sigprocmask(SIG_BLOCK, &blockedMask, &unblockMask);
     }
 
     void run() {
@@ -83,7 +85,7 @@ public:
                 }
             }
 
-            if (pselect(maxFd + 1, &fds, NULL, NULL, NULL, &origMask) == -1) {
+            if (pselect(maxFd + 1, &fds, NULL, NULL, NULL, &unblockMask) == -1) {
                 if (errno == EINTR) {
                     continue;
                 } else {
@@ -127,13 +129,16 @@ public:
             }
         }
     }
-
+    
     ~Server() {
         if (client_fd != -1) {
             close(client_fd);
         }
         close(server_fd);
     }
+
+private:
+    sigset_t unblockMask;
 };
 
 volatile sig_atomic_t Server::wasSigHup = 0;
