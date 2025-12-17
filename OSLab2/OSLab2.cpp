@@ -13,7 +13,7 @@ private:
     static volatile sig_atomic_t shouldExit;
     int server_fd;
     int client_fd;
-    int connection_counter;
+    sigset_t origMask;
 
     static void sigHupHandler(int r) {
         wasSigHup = 1;
@@ -52,7 +52,7 @@ private:
     }
 
 public:
-    Server() : client_fd(-1), connection_counter(0) {
+    Server() : client_fd(-1) {
         setupSignalHandler();
         setupSocket();
         
@@ -94,32 +94,36 @@ public:
             }
 
             if (FD_ISSET(server_fd, &fds)) {
-                int new_client = accept(server_fd, NULL, NULL);
+                struct sockaddr_in client_addr;
+                socklen_t client_len = sizeof(client_addr);
+                int new_client = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
+            
                 if (new_client != -1) {
-                    std::cout << "Принято новое подключение: " << new_client << "!" << std::endl;
-                    connection_counter += 1;
-                    
-                    if (connection_counter > 1) {
+                    char client_ip[INET_ADDRSTRLEN];
+                    inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+                    int client_port = ntohs(client_addr.sin_port);
+                    std::cout << "Новое подключение от " << client_ip << ":" << client_port << std::endl;
+            
+                    if (client_fd != -1) {
+                        std::cout << "Закрываем подключение: разрешено только одно активное подключение" << std::endl;
                         close(new_client);
-                        std::cout << "Подключение " << new_client << " закрыто!" << std::endl;
-                        connection_counter -= 1;
                     } else {
                         client_fd = new_client;
+                        std::cout << "Активное подключение установлено" << std::endl;
                     }
                 }
             }
 
             if (client_fd != -1 && FD_ISSET(client_fd, &fds)) {
-                char buffer[256];
-                int msg_size = read(client_fd, buffer, sizeof(buffer));
+                char buffer[1024];
+                int message_size = read(client_fd, buffer, sizeof(buffer));
                 
-                if (msg_size > 0) {
-                    std::cout << "Получено сообщение от " << client_fd << " размером " << msg_size << "!" << std::endl;
+                if (message_size > 0) {
+                    std::cout << "Получено сообщение от " << client_fd << " размером " << message_size << "!" << std::endl;
                 } else {
                     std::cout << "Подключение " << client_fd << " закрыто!" << std::endl;
                     close(client_fd);
                     client_fd = -1;
-                    connection_counter -= 1;
                 }
             }
         }
@@ -131,9 +135,6 @@ public:
         }
         close(server_fd);
     }
-
-private:
-    sigset_t origMask;
 };
 
 volatile sig_atomic_t Server::wasSigHup = 0;
