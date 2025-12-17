@@ -3,6 +3,7 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
 #include <cerrno>
@@ -56,10 +57,8 @@ public:
         setupSignalHandler();
         setupSocket();
         
-        sigset_t blockedMask;
-        sigemptyset(&blockedMask);
-        sigaddset(&blockedMask, SIGHUP);
-        sigprocmask(SIG_BLOCK, &blockedMask, &origMask);
+        sigemptyset(&origMask);
+        sigaddset(&origMask, SIGHUP);
     }
 
     void run() {
