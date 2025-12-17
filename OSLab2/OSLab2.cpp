@@ -26,7 +26,6 @@ private:
     void setupSignalHandler() {
         struct sigaction sa;
         memset(&sa, 0, sizeof(sa));
-        sigaction(SIGHUP, NULL, &sa);
         
         //SIGHUP
         sa.sa_handler = sigHupHandler;
