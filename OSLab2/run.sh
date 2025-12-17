@@ -4,6 +4,7 @@ set -eu
 
 if [ $# -ne 1 ]; then
   echo "Error: there must be only 1 argument" >&2
+  exit 1
 fi
 
 g++ -o OSLab2 OSLab2.cpp -std=c++17
