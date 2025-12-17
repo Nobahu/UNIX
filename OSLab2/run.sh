@@ -7,7 +7,7 @@ if [ $# -ne 1 ]; then
   exit 1
 fi
 
-g++ -o OSLab2 OSLab2.cpp -std=c++17
+g++ -o OSLab4 OSLab4.cpp -std=c++17
 
 filename=$(basename "$1" .cpp)
 ./"$filename"
