@@ -12,14 +12,12 @@ app = Flask(__name__)
 KAFKA_BROKER = os.getenv('KAFKA_BROKER', 'localhost:9092')
 REQUEST_TOPIC = 'hash-requests'
 
-# Ленивая инициализация
 producer = None
 producer_lock = threading.Lock()
 results_cache = {}
 cache_lock = threading.Lock()
 
 def get_kafka_producer():
-    """Ленивое получение Kafka producer"""
     global producer
     
     with producer_lock:
@@ -58,7 +56,7 @@ def hash_text():
     if not text:
         return jsonify({'error': 'Text is required'}), 400
     
-    # Получаем producer (ленивая инициализация)
+    # Получаем producer
     kafka_producer = get_kafka_producer()
     if kafka_producer is None:
         return jsonify({'error': 'Kafka service is unavailable'}), 503
@@ -89,7 +87,6 @@ def hash_text():
 
 @app.route('/hash/<request_id>', methods=['GET'])
 def get_hash_result(request_id):
-    """Получение результата из кэша"""
     with cache_lock:
         result = results_cache.get(request_id)
     
@@ -106,7 +103,6 @@ def get_hash_result(request_id):
 
 @app.route('/result', methods=['POST'])
 def receive_result():
-    """Endpoint для worker'ов чтобы отправлять результаты"""
     data = request.get_json()
     request_id = data.get('request_id')
     
@@ -136,7 +132,7 @@ def list_algorithms():
 def health():
     kafka_status = 'unknown'
     
-    # Быстрая проверка - не ждем отправки сообщения
+    # Быстрая проверка
     try:
         test_producer = KafkaProducer(
             bootstrap_servers=[KAFKA_BROKER],
